@@ -1,5 +1,7 @@
 import os
 import time
+from datetime import datetime
+
 import RPi.GPIO as GPIO
 import requests
 
@@ -76,30 +78,24 @@ def main():
     GPIO.add_event_detect(input_pin, GPIO.RISING, callback=flow_meter.pulseCallback)
 
     serial_num = flow_meter.sensor()
+    # api-endpoint
     backend_base_url = "http://localhost:8080/api/data"
 
     # Begin infinite loop
     while True:
         try:
-            # api-endpoint
             # GET
-            print('sending GET')
             response = requests.get(backend_base_url + "/last")
             data = response.json()
-            print(data)
-
             turn_on = (data['turnOn'])
-            pause = (data['turnOn'])
-            if flow_meter.readTemperature(serial_num) != None:
-                if turn_on and not pause:
-                    print("power on")
+            waiting = (data['waiting'])
+            if flow_meter.readTemperature(serial_num) is not None:
+                if turn_on and not waiting:
                     flow_meter.power_off(output_pin)
                 else:
                     flow_meter.power_on(output_pin)
-                    print("power off")
 
             # POST
-            print('sending POST')
             body = {'temperature': flow_meter.readTemperature(serial_num)[0],
                     'flow': flow_meter.getFlowRate()
                     }
