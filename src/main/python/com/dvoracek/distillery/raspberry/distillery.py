@@ -87,7 +87,7 @@ def main():
             # GET
             response = requests.get(backend_base_url + "/last")
             data = response.json()
-            print("GET:  " + data)
+            print("GET:  " + str(data))
             turn_on = (data['turnOn'])
             waiting = (data['waiting'])
             if flow_meter.readTemperature(serial_num) is not None:
@@ -102,7 +102,7 @@ def main():
                     }
             response = requests.post(backend_base_url, json=body)
             data = response.json()
-            print("POST: " + data)
+            print("POST: " + str(data))
 
             # Delay
             time.sleep(5)
