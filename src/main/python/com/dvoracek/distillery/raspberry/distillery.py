@@ -109,14 +109,14 @@ def main():
             # POST
             body = {'temperature': flow_meter.readTemperature(serial_num)[0],
                     'turnOn': turn_on,
-                    'planId': data['planId'],
-                    'currentPhaseId': data['currentPhaseId'],
-                    'timeElapsed': data['timeElapsed'],
-                    'alcLevel': data['alcLevel'],
-                    'weight': data['weight'],
+                    'planId': int(data['planId']),
+                    'currentPhaseId': int(data['currentPhaseId']),
+                    'timeElapsed': int(data['timeElapsed']),
+                    'alcLevel': int(data['alcLevel']),
+                    'weight': int(data['weight']),
                     'waiting': waiting,
                     'terminate': data['terminate'],
-                    'flow': flow_meter.getFlowRate()
+                    'flow': int(flow_meter.getFlowRate())
                     }
             response = requests.post(backend_base_url, json=body)
             data = response.json()
