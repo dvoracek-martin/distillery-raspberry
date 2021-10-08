@@ -88,16 +88,28 @@ def main():
             response = requests.get(backend_base_url + "/last")
             data = response.json()
             print("GET:  " + str(data))
+
             turn_on = (data['turnOn'])
             waiting = (data['waiting'])
-            if flow_meter.readTemperature(serial_num) is not None:
-                if turn_on and not waiting:
-                    flow_meter.power_off(output_pin)
-                else:
-                    flow_meter.power_on(output_pin)
+
+            if turn_on is False and waiting is False:
+
+                print("TURNING OFF switch")
+                flow_meter.power_off(output_pin)
+            else:
+                print("TURNING ON switch")
+                flow_meter.power_on(output_pin)
 
             # POST
             body = {'temperature': flow_meter.readTemperature(serial_num)[0],
+                    'turnOn': turn_on,
+                    'planId': data['planId'],
+                    'currentPhaseId': data['currentPhaseId'],
+                    'timeElapsed': data['timeElapsed'],
+                    'alcLevel': data['alcLevel'],
+                    'weight': data['weight'],
+                    'waiting': waiting,
+                    'terminate': data['terminate'],
                     'flow': flow_meter.getFlowRate()
                     }
             response = requests.post(backend_base_url, json=body)
