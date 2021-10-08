@@ -81,6 +81,13 @@ def main():
     # api-endpoint
     backend_base_url = "http://localhost:8080/api/data"
 
+    # INIT POST
+    body = {'temperature': flow_meter.readTemperature(serial_num)[0],
+            'turnOn': False,
+            'waiting': False,
+            'terminate': False
+            }
+    response = requests.post(backend_base_url, json=body)
     # Begin infinite loop
     while True:
         try:
