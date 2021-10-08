@@ -93,7 +93,6 @@ def main():
             waiting = (data['waiting'])
 
             if turn_on is False and waiting is False:
-
                 print("TURNING OFF switch")
                 flow_meter.power_off(output_pin)
             else:
