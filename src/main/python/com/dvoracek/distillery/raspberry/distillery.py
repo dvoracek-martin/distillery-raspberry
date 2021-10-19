@@ -1,5 +1,6 @@
 import os
 import time
+from calendar import calendar
 from datetime import datetime
 
 import RPi.GPIO as GPIO
@@ -10,11 +11,11 @@ class Distillery():
 
     # turn on heater
     def power_on(self, pin):
-        GPIO.output(pin, GPIO.HIGH)
+        GPIO.output(pin, GPIO.LOW)
 
     # turn off heater
     def power_off(self, pin):
-        GPIO.output(pin, GPIO.LOW)
+        GPIO.output(pin, GPIO.HIGH)
 
     # temperature sensor
     def sensor(self):
@@ -74,59 +75,59 @@ def main():
     GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
     # Init FlowMeter instance and pulse callback
-    flow_meter = Distillery()
-    GPIO.add_event_detect(input_pin, GPIO.RISING, callback=flow_meter.pulseCallback)
+    distillery = Distillery()
+    distillery.power_off(output_pin)
+    GPIO.add_event_detect(input_pin, GPIO.RISING, callback=distillery.pulseCallback)
 
-    serial_num = flow_meter.sensor()
+    serial_num = distillery.sensor()
     # api-endpoint
     backend_base_url = "http://localhost:8080/api/data"
 
-    # INIT POST
-    body = {'temperature': flow_meter.readTemperature(serial_num)[0],
-            'turnOn': False,
-            'waiting': False,
-            'terminate': False
-            }
-    response = requests.post(backend_base_url, json=body)
     # Begin infinite loop
     while True:
         try:
             # GET
-            response = requests.get(backend_base_url + "/last")
-            data = response.json()
-            print("GET:  " + str(data))
+            try:
+                response = requests.get(backend_base_url + "/last")
+                data = response.json()
+                print("GET:  " + str(data))
+                print("time: " + str(data['timeElapsed']))
 
-            turn_on = (data['turnOn'])
-            waiting = (data['waiting'])
+                turn_on = (data['turnOn'])
+                waiting = (data['waiting'])
 
-            if turn_on is False and waiting is False:
-                print("TURNING OFF switch")
-                flow_meter.power_off(output_pin)
-            else:
-                print("TURNING ON switch")
-                flow_meter.power_on(output_pin)
+                if turn_on is False:
+                    distillery.power_off(output_pin)
+                else:
+                    distillery.power_on(output_pin)
+                now = int(datetime.utcnow().timestamp()*1e3)
 
-            # POST
-            body = {'temperature': flow_meter.readTemperature(serial_num)[0],
-                    'turnOn': turn_on,
-                    'planId': int(data['planId']),
-                    'currentPhaseId': int(data['currentPhaseId']),
-                    'timeElapsed': int(data['timeElapsed']),
-                    'alcLevel': int(data['alcLevel']),
-                    'weight': int(data['weight']),
+                # POST
+                body = {
+                    'planId': data['planId'],
+                    'currentPhaseId': data['currentPhaseId'],
+                    'temperature': distillery.readTemperature(serial_num)[0],
+                    'timeElapsed': (data['timeElapsed']),
+                    'timestamp': now,
+                    'alcLevel': data['alcLevel'],
+                    'weight': data['weight'],
                     'waiting': waiting,
+                    'flow': distillery.getFlowRate(),
                     'terminate': data['terminate'],
-                    'flow': int(flow_meter.getFlowRate())
-                    }
-            response = requests.post(backend_base_url, json=body)
-            data = response.json()
-            print("POST: " + str(data))
+                    'turnOn': turn_on
+                }
+                response = requests.post(backend_base_url, json=body)
+                data = response.json()
+                print("POST: " + str(data))
 
-            # Delay
-            time.sleep(5)
+                # Delay
+                time.sleep(5)
+            except Exception as e:
+                print('Exception: '+ str(e))
+                time.sleep(5)
         except KeyboardInterrupt:
             GPIO.cleanup()
-            flow_meter.kill()
+            distillery.kill()
 
 
 if __name__ == '__main__':
