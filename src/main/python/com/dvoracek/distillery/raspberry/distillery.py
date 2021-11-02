@@ -1,13 +1,11 @@
 import os
 import time
-from calendar import calendar
-from datetime import datetime
-
 import RPi.GPIO as GPIO
 import requests
+from datetime import datetime
 
 
-class Distillery():
+class Distillery:
 
     # turn on heater
     def power_on(self, pin):
@@ -27,22 +25,23 @@ class Distillery():
     # read temperature
     def readTemperature(self, ds18b20):
         location = '/sys/bus/w1/devices/' + ds18b20 + '/w1_slave'
-        tfile = open(location)
-        text = tfile.read()
-        tfile.close()
-        secondline = text.split("\n")[1]
-        temperaturedata = secondline.split(" ")[9]
-        temperature = float(temperaturedata[2:])
+        t_file = open(location)
+        text = t_file.read()
+        t_file.close()
+        second_line = text.split("\n")[1]
+        temperature_data = second_line.split(" ")[9]
+        temperature = float(temperature_data[2:])
         celsius = temperature / 1000
-        farenheit = (celsius * 1.8) + 32
-        return celsius, farenheit
+        fahrenheit = (celsius * 1.8) + 32
+        return celsius, fahrenheit
 
-    def kill(self):
+    @staticmethod
+    def kill():
         quit()
 
     # calculate the flow
-    def pulseCallback(self, p):
-        # Calculate the time difference since last pulse recieved
+    def pulse_callback(self, p):
+        # Calculate the time difference since last pulse received
         current_time = datetime.now()
         diff = (current_time - self.last_time).total_seconds()
 
@@ -53,7 +52,7 @@ class Distillery():
         # Reset time of last pulse
         self.last_time = current_time
 
-    def getFlowRate(self):
+    def get_flow_rate(self):
         if (datetime.now() - self.last_time).total_seconds() > 1:
             self.flow_rate = 0.0
 
@@ -74,33 +73,37 @@ def main():
     GPIO.setup(output_pin, GPIO.OUT)
     GPIO.setup(input_pin, GPIO.IN, pull_up_down=GPIO.PUD_UP)
 
-    # Init FlowMeter instance and pulse callback
+    # Init Distillery instance
     distillery = Distillery()
     distillery.power_off(output_pin)
-    GPIO.add_event_detect(input_pin, GPIO.RISING, callback=distillery.pulseCallback)
-
+    GPIO.add_event_detect(input_pin, GPIO.RISING, callback=distillery.pulse_callback)
     serial_num = distillery.sensor()
-    # api-endpoint
     backend_base_url = "http://localhost:8080/api/data"
 
-    # Begin infinite loop
+    # Begin the infinite loop
     while True:
         try:
             # GET
             try:
                 response = requests.get(backend_base_url + "/last")
+                try:
+                    response.json()
+                except ValueError:
+                    # There are no data to get
+                    time.sleep(5)
+                    continue
                 data = response.json()
-                print("GET:  " + str(data))
-                print("time: " + str(data['timeElapsed']))
+                # uncomment the following line for debugging
+                # print("GET:  " + str(data))
 
                 turn_on = (data['turnOn'])
                 waiting = (data['waiting'])
-
                 if turn_on is False:
                     distillery.power_off(output_pin)
                 else:
                     distillery.power_on(output_pin)
-                now = int(datetime.utcnow().timestamp()*1e3)
+                # timestamp
+                now = int(datetime.utcnow().timestamp() * 1e3)
 
                 # POST
                 body = {
@@ -112,18 +115,20 @@ def main():
                     'alcLevel': data['alcLevel'],
                     'weight': data['weight'],
                     'waiting': waiting,
-                    'flow': distillery.getFlowRate(),
+                    'flow': distillery.get_flow_rate(),
                     'terminate': data['terminate'],
-                    'turnOn': turn_on
+                    'turnOn': turn_on,
+                    'source': 'raspi'
                 }
                 response = requests.post(backend_base_url, json=body)
-                data = response.json()
-                print("POST: " + str(data))
 
-                # Delay
+                # uncomment the following lines for debugging
+                # data = response.json()
+                # print("POST: " + str(data))
+
                 time.sleep(5)
             except Exception as e:
-                print('Exception: '+ str(e))
+                print('Exception: ' + str(e))
                 time.sleep(5)
         except KeyboardInterrupt:
             GPIO.cleanup()
