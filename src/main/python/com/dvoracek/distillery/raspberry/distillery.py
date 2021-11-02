@@ -1,8 +1,9 @@
 import os
 import time
+from datetime import datetime
+
 import RPi.GPIO as GPIO
 import requests
-from datetime import datetime
 
 
 class Distillery:
