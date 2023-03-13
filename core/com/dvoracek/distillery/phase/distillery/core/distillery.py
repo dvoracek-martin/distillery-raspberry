@@ -1,7 +1,7 @@
 import json
-import os
-import time
+import random
 from datetime import datetime
+
 from kafka import KafkaConsumer
 from kafka import KafkaProducer
 
@@ -72,7 +72,8 @@ def main():
     def kafkaDistillationStartedConsumer():
         consumer = KafkaConsumer(group_id='distillery-raspberry', bootstrap_servers=bootstrap_servers)
         consumer.subscribe(
-            ['distillation-started', 'distillation-paused', 'distillation-continued', 'distillation-terminated', 'distillation-progress-backend'])
+            ['distillation-started', 'distillation-paused', 'distillation-continued', 'distillation-terminated',
+             'distillation-progress-backend'])
         producer = KafkaProducer(bootstrap_servers=bootstrap_servers)
         isPaused = False
         isRunning = False
@@ -103,10 +104,13 @@ def main():
             if (msg.topic == 'distillation-progress-backend'):
                 # print('DISTILLATION PROGRESS BACKEND')
                 # print('Getting information from the sensors and sending it to backend')
+                receivedFromBackend = json.loads(msg.value)
                 body = {
-                    'temperature': 38,
-                    'weight': 350,
-                    'flow': 3700,
+                    'timeStartedInMillis': receivedFromBackend["timeStartedInMillis"],
+                    'distillationProcedureId': receivedFromBackend["distillationProcedureId"],
+                    'temperature': (38 + random.randint(0, 9)),
+                    'weight': (350 + random.randint(0, 50)),
+                    'flow': 3700 + (random.randint(0, 500)),
                 }
                 producer.send('distillation-progress-raspberry', json.dumps(body).encode('utf-8'))
                 producer.flush()
