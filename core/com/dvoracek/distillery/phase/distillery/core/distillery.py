@@ -106,7 +106,7 @@ def main():
                 # print('Getting information from the sensors and sending it to backend')
                 receivedFromBackend = json.loads(msg.value)
                 body = {
-                    'timeElapsedInMillis': receivedFromBackend["timeElapsedInMillis"],
+                    'timeStartedInMillis': receivedFromBackend["timeStartedInMillis"],
                     'distillationProcedureId': receivedFromBackend["distillationProcedureId"],
                     'temperature': (38 + random.randint(0, 9)),
                     'weight': (350 + random.randint(0, 50)),
