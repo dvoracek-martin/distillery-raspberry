@@ -69,45 +69,46 @@ class Distillery:
 
 
 def main():
-    def kafkaDistillationStartedConsumer():
+    def kafka_distillation_started_consumer():
         consumer = KafkaConsumer(group_id='distillery-raspberry', bootstrap_servers=bootstrap_servers)
         consumer.subscribe(
             ['distillation-started', 'distillation-paused', 'distillation-continued', 'distillation-terminated',
              'distillation-progress-backend'])
         producer = KafkaProducer(bootstrap_servers=bootstrap_servers)
-        isPaused = False
-        isRunning = False
+        is_paused = False
+        is_running = False
 
         for msg in consumer:
             if (msg.topic == 'distillation-started'):
                 print('DISTILLATION STARTED')
                 print('Turning the power on - started')
-                isRunning = True
-                isPaused = False
+                is_running = True
+                is_paused = False
             if (msg.topic == 'distillation-paused'):
-                print('DISTILLATION PAUSED')
-                if (isPaused is False):
+                # print('DISTILLATION PAUSED')
+                if (is_paused is False):
                     print('Turning the power off - paused')
-                isPaused = True
-                isRunning = False
+                is_paused = True
+                is_running = False
             if (msg.topic == 'distillation-continued'):
                 # print('DISTILLATION CONTINUED')
-                if (isPaused is True and isRunning is False):
+                if (is_paused is True and is_running is False):
                     print('Turning the power on - continued')
-                isPaused = False
-                isRunning = True
+                is_paused = False
+                is_running = True
             if (msg.topic == 'distillation-terminated'):
                 print('DISTILLATION TERMINATED')
                 print('Turning the power off - terminated')
-                isPaused = False
-                isRunning = False
+                is_paused = False
+                is_running = False
             if (msg.topic == 'distillation-progress-backend'):
-                # print('DISTILLATION PROGRESS BACKEND')
-                # print('Getting information from the sensors and sending it to backend')
-                receivedFromBackend = json.loads(msg.value)
+                received_from_backend = json.loads(msg.value)
+                print(received_from_backend["distillationPhaseId"])
                 body = {
-                    'timeStartedInMillis': receivedFromBackend["timeStartedInMillis"],
-                    'distillationProcedureId': receivedFromBackend["distillationProcedureId"],
+                    'timeStartedInMillis': received_from_backend["timeStartedInMillis"],
+                    'timeElapsedSinceStartInMillis': received_from_backend["timeElapsedSinceStartInMillis"],
+                    'distillationProcedureId': received_from_backend["distillationProcedureId"],
+                    'distillationPhaseId': received_from_backend["distillationPhaseId"],
                     'temperature': (38 + random.randint(0, 9)),
                     'weight': (350 + random.randint(0, 50)),
                     'flow': 3700 + (random.randint(0, 500)),
@@ -115,7 +116,7 @@ def main():
                 producer.send('distillation-progress-raspberry', json.dumps(body).encode('utf-8'))
                 producer.flush()
 
-    kafkaDistillationStartedConsumer()
+    kafka_distillation_started_consumer()
 
 
 if __name__ == '__main__':
